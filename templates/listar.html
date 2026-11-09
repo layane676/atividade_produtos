@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Produtos</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 16px; color: #222; }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        a, button { color: #075985; }
+        .botao { display: inline-block; padding: 10px 14px; color: white; background: #075985; text-decoration: none; border-radius: 4px; }
+        .tabela-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        button { cursor: pointer; padding: 6px 10px; }
+        #mensagem { min-height: 1.5em; }
+        .erro { color: #b91c1c; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Produtos</h1>
+            <a class="botao" href="/novo">Cadastrar produto</a>
+        </header>
+        <p id="mensagem" role="status" aria-live="polite">Carregando produtos...</p>
+        <div class="tabela-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Preço</th>
+                        <th>Quantidade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-produtos"></tbody>
+            </table>
+        </div>
+    </main>
+    <script>
+        const lista = document.querySelector("#lista-produtos");
+        const mensagem = document.querySelector("#mensagem");
+
+        function adicionarCelula(linha, valor) {
+            const celula = document.createElement("td");
+            celula.textContent = valor ?? "";
+            linha.append(celula);
+        }
+
+        async function carregarProdutos() {
+            mensagem.textContent = "Carregando produtos...";
+            mensagem.className = "";
+            lista.replaceChildren();
+
+            try {
+                const resposta = await fetch("/listar");
+                if (!resposta.ok) {
+                    throw new Error("Não foi possível carregar os produtos.");
+                }
+                const produtos = await resposta.json();
+                mensagem.textContent = produtos.length ? "" : "Nenhum produto cadastrado.";
+
+                for (const produto of produtos) {
+                    const linha = document.createElement("tr");
+                    adicionarCelula(linha, produto.nome);
+                    adicionarCelula(linha, produto.categoria);
+                    adicionarCelula(linha, Number(produto.preco).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    }));
+                    adicionarCelula(linha, produto.quantidade);
+
+                    const acoes = document.createElement("td");
+                    const excluir = document.createElement("button");
+                    excluir.type = "button";
+                    excluir.textContent = "Excluir";
+                    excluir.setAttribute("aria-label", `Excluir ${produto.nome}`);
+                    excluir.addEventListener("click", () => excluirProduto(produto.id));
+                    acoes.append(excluir);
+                    linha.append(acoes);
+                    lista.append(linha);
+                }
+            } catch (erro) {
+                mensagem.textContent = erro.message;
+                mensagem.className = "erro";
+            }
+        }
+
+        async function excluirProduto(id) {
+            if (!window.confirm("Deseja excluir este produto?")) {
+                return;
+            }
+
+            try {
+                const resposta = await fetch(`/apagar/${id}`, { method: "DELETE" });
+                const resultado = await resposta.json();
+                if (!resposta.ok) {
+                    throw new Error(resultado.erro || "Não foi possível excluir o produto.");
+                }
+                await carregarProdutos();
+            } catch (erro) {
+                mensagem.textContent = erro.message;
+                mensagem.className = "erro";
+            }
+        }
+
+        carregarProdutos();
+    </script>
+</body>
+</html>

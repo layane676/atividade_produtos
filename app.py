@@ -1,14 +1,23 @@
-from flask import Flask
+from flask import Flask, redirect, render_template, url_for
+
 from database import inicializar_banco
-from controllers.produto_controller import produto
+from controllers.produto_controller import produto_bp
 
 app = Flask(__name__)
 
-app.register_blueprint(produto)
+inicializar_banco()
+app.register_blueprint(produto_bp)
+
 
 @app.route("/", methods=["GET"])
 def inicio():
-    pass
+    return render_template("listar.html")
 
-if __name__ == '__main__':
+
+@app.route("/novo", methods=["GET"])
+def novo_produto():
+    return render_template("cadastrar.html")
+
+
+if __name__ == "__main__":
     app.run(debug=True)
